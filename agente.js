@@ -192,11 +192,16 @@ class AgenteSistema {
       });
     }
 
-    // Procesos
+    // Procesos — solo filtra por nombre específico con "de X" o tech keywords
     if (/procesos?|process/.test(ordenLower)) {
-      const filtro = orden.match(/procesos?\s+(\w+)/i)?.[1] || '';
+      // Solo filtra si es "procesos de X" o "proceso node/python/etc", no adjetivos
+      const matchDe    = orden.match(/procesos?\s+de\s+(\w+)/i);
+      const ADJECTIVES = new Set(['activos','corriendo','actuales','todos','all','running','lista','listar','ver','mostrar']);
+      const matchPost  = orden.match(/procesos?\s+(\w+)/i);
+      const filtro     = matchDe?.[1] ||
+                         (matchPost && !ADJECTIVES.has(matchPost[1].toLowerCase()) ? matchPost[1] : '');
       return await new Promise(resolve => {
-        exec(`ps aux ${filtro ? `| grep ${filtro}` : ''} | head -15`,
+        exec(`ps aux ${filtro ? `| grep -i ${filtro}` : ''} | head -20`,
           (err, stdout) => resolve(stdout.trim()));
       });
     }
