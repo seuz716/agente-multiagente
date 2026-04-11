@@ -86,7 +86,15 @@ class Memoria {
 
 // ==================== OLLAMA CLIENT ====================
 
-function llamarOllama(modelo, prompt, timeout = 60000) {
+// Modelos por tarea (los más rápidos disponibles en tu WSL)
+const MODELOS = {
+  codigo:   'qwen2.5-coder:3b',  // rápido y especializado en código
+  sistema:  'tinyllama',          // muy rápido para respuestas cortas
+  archivos: 'tinyllama',
+  default:  'tinyllama'
+};
+
+function llamarOllama(modelo, prompt, timeout = 120000) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({ model: modelo, prompt, stream: false });
     const options = {
@@ -101,13 +109,16 @@ function llamarOllama(modelo, prompt, timeout = 60000) {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        try { resolve(JSON.parse(data).response || ''); }
+        try { resolve(JSON.parse(data).response || '(sin respuesta)'); }
         catch (e) { reject(new Error('Respuesta Ollama inválida')); }
       });
     });
 
-    req.setTimeout(timeout, () => { req.destroy(); reject(new Error('Timeout Ollama')); });
-    req.on('error', reject);
+    req.setTimeout(timeout, () => {
+      req.destroy();
+      reject(new Error(`Timeout — el modelo '${modelo}' tardó más de ${timeout/1000}s. Prueba con tinyllama.`));
+    });
+    req.on('error', (e) => reject(new Error(`Ollama no disponible: ${e.message}. ¿Está corriendo 'ollama serve'?`)));
     req.write(body);
     req.end();
   });
@@ -116,12 +127,14 @@ function llamarOllama(modelo, prompt, timeout = 60000) {
 // ==================== AGENTES ESPECIALIZADOS ====================
 
 class AgenteCodigo {
-  async ejecutar(orden, ia) {
-    if (ia) {
-      const prompt = `Eres un experto en programación. El usuario quiere: "${orden}"\nResponde con una explicación breve y el código necesario. Sé conciso.`;
-      return await llamarOllama(ia, prompt);
+  async ejecutar(orden, _ia) {
+    const modelo = MODELOS.codigo;
+    const prompt = `Eres un experto en programación. El usuario quiere: "${orden}"\nResponde con una explicación breve y el código necesario. Sé conciso.`;
+    try {
+      return await llamarOllama(modelo, prompt);
+    } catch (e) {
+      return `⚠️ IA no disponible (${e.message})\n\nPuedes ejecutar manualmente lo que necesites.`;
     }
-    return `Orden de código recibida: ${orden}`;
   }
 }
 
@@ -154,12 +167,12 @@ class AgenteArchivos {
       });
     }
 
-    if (ia) {
-      const prompt = `Eres un gestor de archivos. El usuario quiere: "${orden}". Indica paso a paso cómo hacerlo en Linux.`;
-      return await llamarOllama(ia, prompt);
+    try {
+      const prompt = `Eres un gestor de archivos Linux. El usuario quiere: "${orden}". Indica paso a paso cómo hacerlo.`;
+      return await llamarOllama(MODELOS.archivos, prompt);
+    } catch (e) {
+      return `Orden recibida: ${orden}\n(IA no disponible: ${e.message})`;
     }
-
-    return `Orden de archivos recibida: ${orden}`;
   }
 }
 
@@ -197,12 +210,12 @@ class AgenteSistema {
       });
     }
 
-    if (ia) {
-      const prompt = `Eres un asistente de sistema Linux. El usuario quiere: "${orden}". Explica cómo hacerlo de forma segura.`;
-      return await llamarOllama(ia, prompt);
+    try {
+      const prompt = `Eres un asistente de sistema Linux. El usuario quiere: "${orden}". Explica cómo hacerlo de forma segura y brevemente.`;
+      return await llamarOllama(MODELOS.sistema, prompt);
+    } catch (e) {
+      return `⚠️ Comando no permitido por whitelist: ${orden}\n(IA: ${e.message})`;
     }
-
-    return `⚠️ Comando no permitido por whitelist: ${orden}`;
   }
 }
 
@@ -250,14 +263,14 @@ class AgentePersonal {
 
       switch (tipo) {
         case 'codigo':
-          resultado = await this.orquestador.agenteCodigo.ejecutar(orden, modelo);
+          resultado = await this.orquestador.agenteCodigo.ejecutar(orden);
           break;
         case 'sistema':
-          resultado = await this.orquestador.agenteSistema.ejecutar(orden, modelo);
+          resultado = await this.orquestador.agenteSistema.ejecutar(orden);
           break;
         case 'archivos':
         default:
-          resultado = await this.orquestador.agenteArchivos.ejecutar(orden, modelo);
+          resultado = await this.orquestador.agenteArchivos.ejecutar(orden);
           break;
       }
 

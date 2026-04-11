@@ -30,13 +30,17 @@ class Orquestador {
 
     this.palabrasClavesSistema = [
       'instala', 'descarga', 'configura', 'permisos', 'bash',
-      'comando', 'terminal', 'servicio', 'proceso', 'memoria'
+      'comando', 'terminal', 'servicio', 'proceso', 'memoria',
+      // PATCH: ampliado para cubrir frases comunes en español
+      'sistema', 'info', 'cpu', 'ram', 'disco', 'red', 'network',
+      'ver', 'muestra', 'mostrar', 'listar procesos', 'ps', 'top',
+      'reinicia', 'restart', 'start', 'stop', 'status', 'ping'
     ];
 
     // PATCH: patrones de prioridad absoluta — cortocircuitan el sistema de puntaje
     // cuando la intención es inequívoca, sin importar el resto de las palabras.
     this.prioridadAbsolutaCodigo   = /crear.*proyecto|startproject|nuevo.*django|escribir.*script|generar.*codigo/i;
-    this.prioridadAbsolutaSistema  = /instalar.*pip|npm install|sudo|ejecutar.*bash|reiniciar.*servicio/i;
+    this.prioridadAbsolutaSistema  = /instalar.*pip|npm install|sudo|ejecutar.*bash|reiniciar.*servicio|info.*sistema|sistema.*info|ver.*proceso|muestra.*proceso|cpu|ram|disco|uptime|df\s|free\s/i;
     this.prioridadAbsolutaArchivos = /organizar.*descargas|clasificar.*archivos|mover.*carpeta|eliminar.*archivo/i;
   }
 
