@@ -190,8 +190,7 @@ def _get_agente_client() -> Optional[AgenteClient]:
     return _agente_client_cache
 
 
-# Compatibilidad con código que importa 'agente_client' directamente
-agente_client = _get_agente_client
+# Nota: usa _get_agente_client() dentro de cada vista para obtener la instancia lazy.
 
 
 @csrf_exempt
@@ -204,7 +203,8 @@ def ejecutar_agente(request):
         POST /agente/ejecutar/
         body: {"orden": "crea carpeta test"}
     """
-    if not agente_client:
+    client = _get_agente_client()
+    if not client:
         return JsonResponse({
             "ok": False,
             "error": "Agente no disponible"
@@ -220,7 +220,7 @@ def ejecutar_agente(request):
                 "error": "Se requiere 'orden' en el body"
             }, status=400)
 
-        resultado = agente_client.ejecutar_orden(orden)
+        resultado = client.ejecutar_orden(orden)
         return JsonResponse(resultado)
 
     except json.JSONDecodeError:
@@ -240,7 +240,8 @@ def confirmar_agente(request):
         POST /agente/confirmar/
         body: {"respuesta": "sí"}
     """
-    if not agente_client:
+    client = _get_agente_client()
+    if not client:
         return JsonResponse({
             "ok": False,
             "error": "Agente no disponible"
@@ -250,7 +251,7 @@ def confirmar_agente(request):
         datos = json.loads(request.body)
         respuesta = datos.get('respuesta', '')
 
-        resultado = agente_client.confirmar(respuesta)
+        resultado = client.confirmar(respuesta)
         return JsonResponse(resultado)
 
     except json.JSONDecodeError:
@@ -268,13 +269,14 @@ def estado_agente(request):
     Uso:
         GET /agente/estado/
     """
-    if not agente_client:
+    client = _get_agente_client()
+    if not client:
         return JsonResponse({
             "ok": False,
             "error": "Agente no disponible"
         }, status=503)
 
-    resultado = agente_client.obtener_estado()
+    resultado = client.obtener_estado()
     return JsonResponse(resultado)
 
 
@@ -286,13 +288,14 @@ def historial_agente(request):
     Uso:
         GET /agente/historial/
     """
-    if not agente_client:
+    client = _get_agente_client()
+    if not client:
         return JsonResponse({
             "ok": False,
             "error": "Agente no disponible"
         }, status=503)
 
-    resultado = agente_client.obtener_historial()
+    resultado = client.obtener_historial()
     return JsonResponse(resultado)
 
 
@@ -304,14 +307,15 @@ def logs_agente(request):
     Uso:
         GET /agente/logs/?lineas=50
     """
-    if not agente_client:
+    client = _get_agente_client()
+    if not client:
         return JsonResponse({
             "ok": False,
             "error": "Agente no disponible"
         }, status=503)
 
     lineas = int(request.GET.get('lineas', 20))
-    resultado = agente_client.obtener_logs(lineas)
+    resultado = client.obtener_logs(lineas)
     return JsonResponse(resultado)
 
 
