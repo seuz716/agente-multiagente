@@ -161,9 +161,24 @@ class AgenteArchivos {
     // Buscar
     const matchBuscar = ordenLower.match(/busca(?:r)?\s+(.+)/);
     if (matchBuscar) {
+      const termino = matchBuscar[1];
+      let rutaBusqueda = os.homedir(); // Por defecto Home
+      
+      // Expandir rango si el usuario lo pide
+      if (ordenLower.includes('todo el sistema') || ordenLower.includes('raiz')) {
+        rutaBusqueda = '/';
+      } else if (ordenLower.includes('windows') || ordenLower.includes('disco c')) {
+        rutaBusqueda = '/mnt/c';
+      }
+
       return await new Promise(resolve => {
-        exec(`find ~ -name "*${matchBuscar[1]}*" 2>/dev/null | head -20`,
-          (err, stdout) => resolve(stdout.trim() || 'Sin resultados'));
+        // Buscador con tiempo límite y ruteo dinámico
+        const cmd = `find ${rutaBusqueda} -name "*${termino}*" 2>/dev/null | head -30`;
+        this.logger?.info(`Ejecutando búsqueda profunda: ${cmd}`);
+        
+        exec(cmd, { timeout: 20000 }, (err, stdout) => {
+          resolve(stdout.trim() || 'No encontré nada con ese nombre en esa ubicación.');
+        });
       });
     }
 
