@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agente IA — Panel de Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:          #0a0d14;
+      --bg2:         #0f1320;
+      --bg3:         #161b2e;
+      --surface:     rgba(255,255,255,0.04);
+      --surface2:    rgba(255,255,255,0.07);
+      --border:      rgba(255,255,255,0.08);
+      --accent:      #6c63ff;
+      --accent2:     #a78bfa;
+      --green:       #10d9a0;
+      --orange:      #f59e0b;
+      --red:         #ef4444;
+      --blue:        #38bdf8;
+      --text:        #e2e8f0;
+      --text2:       #94a3b8;
+      --text3:       #475569;
+      --radius:      14px;
+      --radius-sm:   8px;
+      --shadow:      0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─── HEADER ─────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px rgba(108,99,255,0.4);
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text2);
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+    .status-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 20px;
+      font-size: 0.78rem;
+      color: var(--text2);
+    }
+    .header-stats span { display: flex; align-items: center; gap: 5px; }
+    .header-stats strong { color: var(--text); font-weight: 600; }
+
+    /* ─── MAIN LAYOUT ─────────────────────────── */
+    .main {
+      display: grid;
+      grid-template-columns: 260px 1fr 280px;
+      flex: 1;
+      overflow: hidden;
+      gap: 0;
+    }
+
+    /* ─── SIDEBAR ─────────────────────────────── */
+    .sidebar {
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-title {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 12px;
+    }
+
+    /* Agent cards */
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-bottom: 6px;
+      cursor: default;
+      transition: all 0.2s;
+    }
+    .agent-card:hover { background: var(--surface2); }
+    .agent-card.active { border-color: var(--accent); background: rgba(108,99,255,0.1); }
+
+    .agent-icon {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .agent-icon.code    { background: rgba(56,189,248,0.15); }
+    .agent-icon.files   { background: rgba(16,217,160,0.15); }
+    .agent-icon.sistema { background: rgba(245,158,11,0.15); }
+
+    .agent-info { flex: 1; min-width: 0; }
+    .agent-name { font-size: 0.85rem; font-weight: 500; }
+    .agent-desc { font-size: 0.72rem; color: var(--text2); margin-top: 1px; }
+
+    /* Quick commands */
+    .quick-commands { padding: 16px; flex: 1; overflow-y: auto; }
+
+    .quick-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      font-size: 0.78rem;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      margin-bottom: 5px;
+      transition: all 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .quick-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+    .quick-btn:active { transform: scale(0.98); }
+
+    .quick-category {
+      font-size: 0.67rem;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin: 12px 0 6px;
+    }
+
+    /* ─── CHAT AREA ───────────────────────────── */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Welcome */
+    .welcome {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text2);
+    }
+    .welcome-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      filter: drop-shadow(0 0 20px rgba(108,99,255,0.5));
+    }
+    .welcome h2 { font-size: 1.4rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .welcome p { font-size: 0.9rem; line-height: 1.6; max-width: 400px; margin: 0 auto; }
+
+    /* Messages */
+    .msg {
+      max-width: 85%;
+      animation: fadeUp 0.3s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.user { align-self: flex-end; }
+    .msg.agent { align-self: flex-start; }
+
+    .msg-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.72rem;
+      color: var(--text3);
+    }
+
+    .msg-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+    .badge-codigo  { background: rgba(56,189,248,0.15);  color: var(--blue); }
+    .badge-archivos{ background: rgba(16,217,160,0.15);  color: var(--green); }
+    .badge-sistema { background: rgba(245,158,11,0.15);  color: var(--orange); }
+    .badge-user    { background: rgba(108,99,255,0.15);  color: var(--accent2); }
+    .badge-error   { background: rgba(239,68,68,0.15);   color: var(--red); }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg.user .msg-bubble {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 16px rgba(108,99,255,0.3);
+    }
+
+    .msg.agent .msg-bubble {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.agent .msg-bubble code,
+    .msg.agent .msg-bubble pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    .msg.agent .msg-bubble pre {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    /* Typing indicator */
+    .typing {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      border-bottom-left-radius: 4px;
+      width: fit-content;
+    }
+    .typing-dots { display: flex; gap: 4px; }
+    .typing-dots span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent2);
+      animation: bounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* ─── INPUT AREA ──────────────────────────── */
+    .input-area {
+      padding: 16px 20px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .voice-status {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      color: #fca5a5;
+      margin-bottom: 10px;
+      animation: pulse-border 1.5s infinite;
+    }
+    .voice-status.active { display: flex; }
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgba(239,68,68,0.3); }
+      50% { border-color: rgba(239,68,68,0.7); }
+    }
+    .voice-wave { display: flex; gap: 2px; align-items: center; }
+    .voice-wave span {
+      width: 3px; background: var(--red);
+      border-radius: 2px;
+      animation: wave 0.8s infinite ease;
+    }
+    .voice-wave span:nth-child(1) { height: 8px; }
+    .voice-wave span:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+    .voice-wave span:nth-child(3) { height: 8px; animation-delay: 0.2s; }
+    .voice-wave span:nth-child(4) { height: 18px; animation-delay: 0.15s; }
+    .voice-wave span:nth-child(5) { height: 8px; animation-delay: 0.3s; }
+    @keyframes wave {
+      0%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(0.4); }
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    #input-text {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      padding: 12px 16px;
+      resize: none;
+      min-height: 48px;
+      max-height: 120px;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.5;
+    }
+    #input-text:focus { border-color: var(--accent); }
+    #input-text::placeholder { color: var(--text3); }
+
+    .btn-icon {
+      width: 48px; height: 48px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text2);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-icon:hover { background: var(--surface2); color: var(--text); }
+    .btn-icon:active { transform: scale(0.94); }
+
+    #btn-mic.recording {
+      background: rgba(239,68,68,0.15);
+      border-color: var(--red);
+      color: var(--red);
+      animation: mic-pulse 1.5s infinite;
+    }
+    @keyframes mic-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    }
+
+    #btn-tts.active {
+      background: rgba(16,217,160,0.1);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    #btn-send {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-color: transparent;
+      color: #fff;
+    }
+    #btn-send:hover { opacity: 0.9; transform: scale(1.03); }
+    #btn-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .input-hints {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.7rem;
+      color: var(--text3);
+    }
+
+    /* ─── RIGHT PANEL ─────────────────────────── */
+    .panel-right {
+      background: var(--bg2);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-tab {
+      flex: 1;
+      padding: 12px 8px;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text3);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .panel-tab:hover { color: var(--text2); }
+    .panel-tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+    .panel-content { flex: 1; overflow-y: auto; }
+    .panel-content::-webkit-scrollbar { width: 3px; }
+    .panel-content::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .tab-pane { display: none; padding: 14px; }
+    .tab-pane.active { display: block; }
+
+    /* Historial */
+    .hist-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .hist-item:hover { background: var(--surface2); border-color: var(--accent); }
+    .hist-orden { color: var(--text); font-weight: 500; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hist-resultado { color: var(--text2); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hist-time { color: var(--text3); font-size: 0.68rem; margin-top: 4px; }
+
+    /* Logs */
+    .log-line {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    .log-line.info  { color: var(--text2); }
+    .log-line.error { color: #fca5a5; }
+    .log-line.warn  { color: #fcd34d; }
+
+    /* Estado */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-value { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+    .stat-label { font-size: 0.68rem; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .btn-reset {
+      width: 100%;
+      padding: 9px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius-sm);
+      color: #fca5a5;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: 8px;
+    }
+    .btn-reset:hover { background: rgba(239,68,68,0.2); }
+
+    /* TTS language selector */
+    .tts-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .tts-controls select {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-size: 0.72rem;
+      padding: 4px 8px;
+      outline: none;
+    }
+    .tts-controls label { font-size: 0.72rem; color: var(--text3); }
+
+    /* Responsive  */
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 0 1fr 0; }
+      .sidebar, .panel-right { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════ HEADER ════════ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🤖</div>
+    <span>Agente IA</span>
+  </div>
+
+  <div class="header-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Conectando...</span>
+  </div>
+
+  <div class="header-stats">
+    <span>⚡ Acciones: <strong id="stat-acciones">0</strong></span>
+    <span>🧠 Modo: <strong id="stat-modo">seguro</strong></span>
+    <span>📡 Puerto: <strong>3000</strong></span>
+  </div>
+</header>
+
+<!-- ════════ MAIN ════════ -->
+<div class="main">
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Agentes disponibles</div>
+
+      <div class="agent-card" id="card-codigo">
+        <div class="agent-icon code">💻</div>
+        <div class="agent-info">
+          <div class="agent-name">Agente Código</div>
+          <div class="agent-desc">qwen2.5-coder · IA local</div>
+        </div>
+      </div>
+
+      <div class="agent-card" id="card-archivos">
+        <div class="agent-icon files">📁</div>
+        <div class="agent-info">
+          <div class="agent-name">Agente Archivos</div>
+          <div class="agent-desc">Carpetas, búsqueda, FS</div>
+        </div>
+      </div>
+
+      <div class="agent-card" id="card-sistema">
+        <div class="agent-icon sistema">⚙️</div>
+        <div class="agent-info">
+          <div class="agent-name">Agente Sistema</div>
+          <div class="agent-desc">tinyllama · procesos, RAM</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-commands">
+      <div class="sidebar-title">Comandos rápidos</div>
+
+      <div class="quick-category">📁 Archivos</div>
+      <button class="quick-btn" onclick="sendQuick('crea carpeta proyectos')">📂 Crea carpeta proyectos</button>
+      <button class="quick-btn" onclick="sendQuick('lista mis archivos')">📋 Lista mis archivos</button>
+      <button class="quick-btn" onclick="sendQuick('busca archivos .pdf')">🔍 Busca archivos .pdf</button>
+
+      <div class="quick-category">⚙️ Sistema</div>
+      <button class="quick-btn" onclick="sendQuick('info del sistema')">🖥️ Info del sistema</button>
+      <button class="quick-btn" onclick="sendQuick('muestra los procesos activos')">📊 Procesos activos</button>
+      <button class="quick-btn" onclick="sendQuick('muestra procesos de node')">🟢 Procesos de Node</button>
+
+      <div class="quick-category">💻 Código IA</div>
+      <button class="quick-btn" onclick="sendQuick('crea una función python para calcular fibonacci')">🐍 Fibonacci Python</button>
+      <button class="quick-btn" onclick="sendQuick('crea un endpoint Django REST para listar usuarios')">🦎 Endpoint Django</button>
+      <button class="quick-btn" onclick="sendQuick('escribe un script bash para hacer backup de una carpeta')">📜 Script backup bash</button>
+    </div>
+  </aside>
+
+  <!-- ── CHAT AREA ── -->
+  <section class="chat-area">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome-msg">
+        <div class="welcome-icon">🤖</div>
+        <h2>Hola, soy tu Agente IA</h2>
+        <p>Puedo gestionar archivos, darte info del sistema y generar código con IA local (Ollama). Escribe una orden o usa el micrófono 🎤.</p>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="voice-status" id="voice-status">
+        <div class="voice-wave"><span></span><span></span><span></span><span></span><span></span></div>
+        <span id="voice-status-text">Escuchando... habla ahora</span>
+      </div>
+
+      <div class="input-row">
+        <button class="btn-icon" id="btn-mic" title="Micrófono (voz a texto)" onclick="toggleMic()">🎤</button>
+        <button class="btn-icon" id="btn-tts" title="Leer respuesta en voz alta" onclick="toggleTTS()">🔊</button>
+        <textarea id="input-text" placeholder="Escribe una orden o pulsa 🎤 para hablar..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="btn-icon" id="btn-send" title="Enviar (Enter)" onclick="sendMessage()">➤</button>
+      </div>
+
+      <div class="input-hints">
+        <span>Enter para enviar · Shift+Enter nueva línea · 🎤 Voz a texto · 🔊 Leer respuesta</span>
+        <div class="tts-controls">
+          <label>Voz:</label>
+          <select id="voice-select"></select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── RIGHT PANEL ── -->
+  <aside class="panel-right">
+    <div class="panel-tabs">
+      <div class="panel-tab active" onclick="switchTab('estado')">Estado</div>
+      <div class="panel-tab" onclick="switchTab('historial')">Historial</div>
+      <div class="panel-tab" onclick="switchTab('logs')">Logs</div>
+    </div>
+
+    <div class="panel-content">
+      <!-- Estado -->
+      <div class="tab-pane active" id="tab-estado">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="s-acciones">0</div>
+            <div class="stat-label">Acciones</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="s-pendientes">0</div>
+            <div class="stat-label">Pendientes</div>
+          </div>
+        </div>
+
+        <div class="sidebar-title">Último agente activo</div>
+        <div class="agent-card" id="last-agent-card" style="margin-bottom:12px">
+          <div class="agent-icon files">—</div>
+          <div class="agent-info">
+            <div class="agent-name" id="last-agent-name">Ninguno aún</div>
+            <div class="agent-desc" id="last-agent-time">—</div>
+          </div>
+        </div>
+
+        <button class="btn-reset" onclick="resetAgent()">🔄 Reiniciar memoria del agente</button>
+      </div>
+
+      <!-- Historial -->
+      <div class="tab-pane" id="tab-historial">
+        <div id="historial-list"><p style="color:var(--text3);font-size:.8rem;text-align:center;padding:20px">Sin historial aún</p></div>
+      </div>
+
+      <!-- Logs -->
+      <div class="tab-pane" id="tab-logs">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:.72rem;color:var(--text3)">Últimas 40 líneas</span>
+          <button onclick="refreshLogs()" style="background:none;border:none;color:var(--accent2);font-size:.72rem;cursor:pointer">↺ Actualizar</button>
+        </div>
+        <div id="logs-list"></div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════
+const API = 'http://localhost:3000';
+let ttsEnabled = false;
+let isRecording = false;
+let recognition = null;
+let activeTab = 'estado';
+let voices = [];
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  checkStatus();
+  loadVoices();
+  setInterval(checkStatus, 8000);
+  setInterval(() => { if (activeTab === 'logs') refreshLogs(); }, 5000);
+  setInterval(() => { if (activeTab === 'historial') refreshHistorial(); }, 6000);
+  setupSpeechRecognition();
+  populateVoiceSelect();
+  window.speechSynthesis.onvoiceschanged = populateVoiceSelect;
+});
+
+// ════════════════════════════════════════════════
+//  STATUS CHECK
+// ════════════════════════════════════════════════
+async function checkStatus() {
+  try {
+    const r = await fetch(`${API}/api/estado`);
+    const d = await r.json();
+    document.getElementById('status-dot').className = 'status-dot';
+    document.getElementById('status-text').textContent = d.agente?.nombre || 'Conectado';
+    document.getElementById('stat-acciones').textContent = d.agente?.tareas_completadas ?? 0;
+    document.getElementById('stat-modo').textContent = d.agente?.modo ?? 'seguro';
+    document.getElementById('s-acciones').textContent = d.agente?.tareas_completadas ?? 0;
+    document.getElementById('s-pendientes').textContent = d.agente?.acciones_pendientes ?? 0;
+  } catch {
+    document.getElementById('status-dot').className = 'status-dot offline';
+    document.getElementById('status-text').textContent = 'Sin conexión';
+  }
+}
+
+// ════════════════════════════════════════════════
+//  CHAT
+// ════════════════════════════════════════════════
+function sendQuick(text) {
+  document.getElementById('input-text').value = text;
+  sendMessage();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('input-text');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  document.getElementById('welcome-msg')?.remove();
+  input.value = '';
+  autoResize(input);
+
+  addMessage('user', text, null, null);
+
+  const typing = addTyping();
+
+  try {
+    const r = await fetch(`${API}/api/orden`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orden: text })
+    });
+    const d = await r.json();
+    typing.remove();
+
+    // Detect agent type from last historial
+    const tipo = await detectLastAgentType();
+
+    if (d.ok) {
+      addMessage('agent', d.resultado, tipo);
+      if (ttsEnabled) speak(d.resultado);
+      highlightAgent(tipo);
+      updateLastAgent(tipo, new Date().toLocaleTimeString());
+    } else {
+      addMessage('agent', `❌ Error: ${d.error}`, 'error');
+    }
+  } catch (e) {
+    typing.remove();
+    addMessage('agent', `❌ No se pudo conectar con el agente.\n${e.message}`, 'error');
+  }
+
+  checkStatus();
+  refreshHistorial();
+}
+
+async function detectLastAgentType() {
+  try {
+    const r = await fetch(`${API}/api/historial`);
+    const d = await r.json();
+    // We don't have tipo in historial, so check logs instead
+    const lr = await fetch(`${API}/api/logs?lineas=5`);
+    const ld = await lr.json();
+    for (const line of [...(ld.logs || [])].reverse()) {
+      if (line.includes('Agente seleccionado: codigo'))   return 'codigo';
+      if (line.includes('Agente seleccionado: archivos')) return 'archivos';
+      if (line.includes('Agente seleccionado: sistema'))  return 'sistema';
+    }
+  } catch {}
+  return 'archivos';
+}
+
+function addMessage(role, text, tipo, extra) {
+  const msgs = document.getElementById('messages');
+
+  const wrapper = document.createElement('div');
+  wrapper.className = `msg ${role}`;
+
+  const header = document.createElement('div');
+  header.className = 'msg-header';
+
+  if (role === 'user') {
+    header.innerHTML = `<span class="msg-badge badge-user">👤 Tú</span><span>${new Date().toLocaleTimeString()}</span>`;
+  } else {
+    const badgeClass = tipo === 'error' ? 'badge-error' :
+                       tipo === 'codigo' ? 'badge-codigo' :
+                       tipo === 'sistema' ? 'badge-sistema' : 'badge-archivos';
+    const badgeIcon  = tipo === 'error' ? '⚠️' :
+                       tipo === 'codigo' ? '💻' :
+                       tipo === 'sistema' ? '⚙️' : '📁';
+    const badgeName  = tipo === 'error' ? 'Error' :
+                       tipo === 'codigo' ? 'Cód.' :
+                       tipo === 'sistema' ? 'Sistema' : 'Archivos';
+    header.innerHTML = `<span class="msg-badge ${badgeClass}">${badgeIcon} ${badgeName}</span><span>${new Date().toLocaleTimeString()}</span>`;
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+
+  // Format code blocks
+  const formatted = text
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre><code>${escapeHtml(code.trim())}</code></pre>`)
+    .replace(/`([^`]+)`/g, (_, c) => `<code>${escapeHtml(c)}</code>`);
+
+  bubble.innerHTML = formatted;
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(bubble);
+  msgs.appendChild(wrapper);
+  msgs.scrollTop = msgs.scrollHeight;
+  return wrapper;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const div  = document.createElement('div');
+  div.className = 'msg agent';
+  div.innerHTML = `
+    <div class="msg-header"><span class="msg-badge badge-archivos">🤖 Agente</span></div>
+    <div class="typing">
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+      <span style="font-size:.78rem;color:var(--text2)">Procesando...</span>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function highlightAgent(tipo) {
+  ['codigo','archivos','sistema'].forEach(t => {
+    document.getElementById(`card-${t}`)?.classList.remove('active');
+  });
+  if (tipo && tipo !== 'error') {
+    document.getElementById(`card-${tipo}`)?.classList.add('active');
+    setTimeout(() => document.getElementById(`card-${tipo}`)?.classList.remove('active'), 3000);
+  }
+}
+
+function updateLastAgent(tipo, time) {
+  const icons = { codigo: '💻', archivos: '📁', sistema: '⚙️' };
+  const names = { codigo: 'Agente Código', archivos: 'Agente Archivos', sistema: 'Agente Sistema' };
+  document.getElementById('last-agent-name').textContent = names[tipo] || 'Desconocido';
+  document.getElementById('last-agent-time').textContent = `Último uso: ${time}`;
+}
+
+// ════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.panel-tab').forEach((t, i) => {
+    const tabs = ['estado','historial','logs'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab === 'historial') refreshHistorial();
+  if (tab === 'logs') refreshLogs();
+}
+
+// ════════════════════════════════════════════════
+//  HISTORIAL
+// ════════════════════════════════════════════════
+async function refreshHistorial() {
+  try {
+    const r = await fetch(`${API}/api/historial`);
+    const d = await r.json();
+    const list = document.getElementById('historial-list');
+    if (!d.historial?.length) {
+      list.innerHTML = '<p style="color:var(--text3);font-size:.8rem;text-align:center;padding:20px">Sin historial aún</p>';
+      return;
+    }
+    list.innerHTML = [...d.historial].reverse().map(h => `
+      <div class="hist-item" onclick="document.getElementById('input-text').value='${h.orden.replace(/'/g,"\\'")}'" title="Clic para reusar">
+        <div class="hist-orden">📝 ${escapeHtml(h.orden)}</div>
+        <div class="hist-resultado">${escapeHtml(h.resultado)}</div>
+        <div class="hist-time">${new Date(h.timestamp).toLocaleString()}</div>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('historial-list').innerHTML = `<p style="color:var(--text3);font-size:.78rem;padding:10px">Error: ${e.message}</p>`;
+  }
+}
+
+// ════════════════════════════════════════════════
+//  LOGS
+// ════════════════════════════════════════════════
+async function refreshLogs() {
+  try {
+    const r = await fetch(`${API}/api/logs?lineas=40`);
+    const d = await r.json();
+    const list = document.getElementById('logs-list');
+    list.innerHTML = (d.logs || []).map(l => {
+      const cls = l.includes('[ERROR]') ? 'error' : l.includes('[WARN]') ? 'warn' : 'info';
+      return `<div class="log-line ${cls}">${escapeHtml(l)}</div>`;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  } catch {}
+}
+
+// ════════════════════════════════════════════════
+//  RESET
+// ════════════════════════════════════════════════
+async function resetAgent() {
+  if (!confirm('¿Reiniciar la memoria del agente?')) return;
+  try {
+    await fetch(`${API}/api/reset`, { method: 'POST' });
+    addMessage('agent', '✅ Agente reiniciado. Memoria borrada.', 'archivos');
+    checkStatus();
+    refreshHistorial();
+  } catch (e) {
+    alert('Error al reiniciar: ' + e.message);
+  }
+}
+
+// ════════════════════════════════════════════════
+//  VTROZ A TEXTO — Web Speech API
+// ════════════════════════════════════════════════
+function setupSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return;
+
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-ES';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    isRecording = true;
+    document.getElementById('btn-mic').classList.add('recording');
+    document.getElementById('voice-status').classList.add('active');
+    document.getElementById('voice-status-text').textContent = 'Escuchando... habla ahora';
+  };
+
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results)
+      .map(r => r[0].transcript).join('');
+    document.getElementById('input-text').value = transcript;
+    autoResize(document.getElementById('input-text'));
+
+    if (e.results[0].isFinal) {
+      document.getElementById('voice-status-text').textContent = `✅ "${transcript}"`;
+      setTimeout(() => {
+        document.getElementById('voice-status').classList.remove('active');
+      }, 1000);
+    }
+  };
+
+  recognition.onerror = (e) => {
+    document.getElementById('voice-status-text').textContent = `Error: ${e.error}`;
+    setTimeout(() => stopMic(), 1500);
+  };
+
+  recognition.onend = () => stopMic();
+}
+
+function toggleMic() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('Tu navegador no soporta reconocimiento de voz.\nUsa Chrome o Edge.');
+    return;
+  }
+  isRecording ? stopMic() : startMic();
+}
+
+function startMic() {
+  if (!recognition) setupSpeechRecognition();
+  recognition?.start();
+}
+
+function stopMic() {
+  isRecording = false;
+  document.getElementById('btn-mic').classList.remove('recording');
+  document.getElementById('voice-status').classList.remove('active');
+  recognition?.stop();
+}
+
+// ════════════════════════════════════════════════
+//  TEXTO A VOZ — Web Speech Synthesis
+// ════════════════════════════════════════════════
+function loadVoices() {
+  voices = window.speechSynthesis.getVoices();
+}
+
+function populateVoiceSelect() {
+  voices = window.speechSynthesis.getVoices();
+  const sel  = document.getElementById('voice-select');
+  const prev = sel.value;
+  sel.innerHTML = '';
+
+  const spanish = voices.filter(v => v.lang.startsWith('es'));
+  const others  = voices.filter(v => !v.lang.startsWith('es'));
+  const list    = [...spanish, ...others];
+
+  list.forEach((v, i) => {
+    const opt  = document.createElement('option');
+    opt.value  = i;
+    opt.textContent = `${v.name} (${v.lang})`;
+    if (v.lang.startsWith('es') && !sel.querySelector('[selected]')) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+}
+
+function toggleTTS() {
+  ttsEnabled = !ttsEnabled;
+  const btn = document.getElementById('btn-tts');
+  btn.classList.toggle('active', ttsEnabled);
+  btn.title = ttsEnabled ? 'Voz activa — clic para desactivar' : 'Leer respuesta en voz alta';
+  if (!ttsEnabled) window.speechSynthesis.cancel();
+}
+
+function speak(text) {
+  window.speechSynthesis.cancel();
+  const clean = text
+    .replace(/```[\s\S]*?```/g, '(bloque de código omitido)')
+    .replace(/[`*#]/g, '')
+    .slice(0, 800);
+
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.lang  = 'es-ES';
+  utt.rate  = 1.05;
+  utt.pitch = 1;
+
+  const sel = document.getElementById('voice-select');
+  const idx = parseInt(sel.value);
+  if (!isNaN(idx) && voices[idx]) utt.voice = voices[idx];
+
+  window.speechSynthesis.speak(utt);
+}
+
+// ════════════════════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════════════════════
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+</script>
+</body>
+</html>

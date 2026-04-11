@@ -21,6 +21,9 @@ const PORT = 3000;
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
+// Interfaz gráfica — sirve public/index.html en http://localhost:3000
+app.use(express.static(path.join(__dirname, 'public')));
+
 // CORS simple
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
