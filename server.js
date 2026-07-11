@@ -140,29 +140,51 @@ app.get('/api/historial', (req, res) => {
  * GET /api/logs
  * Devuelve últimas líneas de logs
  *
- * PATCH: se eliminó fs.readFileSync (bloqueante) y se reemplazó por
- * child_process.exec con 'tail -n' (Linux/Mac) o PowerShell
- * 'Get-Content -Tail' (Windows). El Event Loop nunca se bloquea.
+ * PATCH: Usa fs.promises para operación no bloqueante y execFile para evitar inyección.
  */
-app.get('/api/logs', (req, res) => {
-  const lineas   = Math.max(1, parseInt(req.query.lineas) || 20);
+app.get('/api/logs', async (req, res) => {
+  const lineas   = Math.max(1, Math.min(1000, parseInt(req.query.lineas) || 20));
   const logsPath = agente.ruta_logs;
 
-  // Si el archivo no existe devolvemos vacío sin tocar el disco de forma sinc.
-  if (!logsPath || !fs.existsSync(logsPath)) {
+  // Validación de path - solo caracteres seguros
+  if (!logsPath || !/^[a-zA-Z0-9_\-./]+$/.test(logsPath)) {
     return res.json({ ok: true, logs: [], total_lineas: 0 });
   }
 
-  // Construimos el comando según la plataforma
-  const isWin  = process.platform === 'win32';
-  const cmd    = isWin
-    ? `powershell -Command "Get-Content -Path '${logsPath}' -Tail ${lineas}"`
-    : `tail -n ${lineas} "${logsPath}"`;
+  // Operación no bloqueante para verificar existencia
+  const fsPromises = require('fs').promises;
+  let fileExists = false;
+  try {
+    await fsPromises.access(logsPath);
+    fileExists = true;
+  } catch {
+    return res.json({ ok: true, logs: [], total_lineas: 0 });
+  }
 
-  exec(cmd, { encoding: 'utf8', timeout: 10000 }, (err, stdout, stderr) => {
-    if (err) {
-      agente.logger.error(`/api/logs exec error: ${err.message}`);
-      return res.status(500).json({ ok: false, error: err.message });
+  // Usar execFile para prevenir inyección de comandos
+  const { execFile } = require('child_process');
+  const isWin = process.platform === 'win32';
+  
+  try {
+    let stdout;
+    if (isWin) {
+      // Windows: usar PowerShell con parámetros separados
+      stdout = await new Promise((resolve, reject) => {
+        execFile('powershell', ['-Command', `Get-Content -Path '${logsPath}' -Tail ${lineas}`], 
+          { encoding: 'utf8', timeout: 10000 }, (err, out) => {
+            if (err) reject(err);
+            else resolve(out);
+          });
+      });
+    } else {
+      // Unix: usar tail con argumentos separados
+      stdout = await new Promise((resolve, reject) => {
+        execFile('tail', ['-n', String(lineas), logsPath], 
+          { encoding: 'utf8', timeout: 10000 }, (err, out) => {
+            if (err) reject(err);
+            else resolve(out);
+          });
+      });
     }
 
     const logs = stdout
@@ -175,14 +197,30 @@ app.get('/api/logs', (req, res) => {
       logs: logs,
       total_lineas: logs.length
     });
-  });
+  } catch (err) {
+    agente.logger.error(`/api/logs error: ${err.message}`);
+    res.status(500).json({ ok: false, error: 'Error leyendo logs' });
+  }
 });
 
 /**
  * POST /api/reset
  * Reinicia la memoria del agente
+ * Requiere X-API-Key en header para autenticación
  */
 app.post('/api/reset', (req, res) => {
+  // Autenticación básica via API key
+  const apiKey = req.headers['x-api-key'];
+  const expectedKey = process.env.AGENTE_API_KEY;
+  
+  if (expectedKey && apiKey !== expectedKey) {
+    agente.logger.warn('Intento de reset con API key inválida');
+    return res.status(401).json({
+      ok: false,
+      error: 'No autorizado'
+    });
+  }
+
   try {
     agente.memoria.estructura = {
       contador_acciones: 0,

@@ -62,9 +62,11 @@ class Orquestador {
     let puntajeSistema  = 0;
 
     palabras.forEach(palabra => {
-      if (this.palabrasClavesCodigo.some(p  => palabra.includes(p))) puntajeCodigo   += 2;
-      if (this.palabrasClaveArchivos.some(p => palabra.includes(p))) puntajeArchivos += 2;
-      if (this.palabrasClavesSistema.some(p => palabra.includes(p))) puntajeSistema  += 2;
+      // CORREGIDO: verificar si la palabra clave contiene la palabra (no al revés)
+      // Esto permite que "crea proyecto" coincida con la clave "crear proyecto"
+      if (this.palabrasClavesCodigo.some(p  => p.includes(palabra))) puntajeCodigo   += 2;
+      if (this.palabrasClaveArchivos.some(p => p.includes(palabra))) puntajeArchivos += 2;
+      if (this.palabrasClavesSistema.some(p => p.includes(palabra))) puntajeSistema  += 2;
     });
 
     // Patrones más específicos (bonus de contexto)

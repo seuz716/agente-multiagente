@@ -18,9 +18,44 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from functools import wraps
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# DECORADORES DE SEGURIDAD
+# ============================================================
+
+def require_agent_api_key(view_func):
+    """
+    Decorador que requiere X-API-Key válido en headers.
+    La API key se toma de settings.AGENTE_API_KEY.
+    Si la key no está configurada, permite el acceso (modo desarrollo).
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        expected_key = getattr(settings, 'AGENTE_API_KEY', None)
+        # Si no hay key configurada, permitir acceso (modo desarrollo)
+        if expected_key:
+            api_key = request.headers.get('X-API-Key')
+            if api_key != expected_key:
+                return JsonResponse({
+                    'ok': False,
+                    'error': 'No autorizado - API key inválida'
+                }, status=401)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def csrf_exempt_conditional(view_func):
+    """
+    Solo exime CSRF en DEBUG. En producción, requiere token CSRF.
+    """
+    if getattr(settings, 'DEBUG', False):
+        return csrf_exempt(view_func)
+    return view_func
 
 
 class AgenteClient:
@@ -194,7 +229,8 @@ def _get_agente_client() -> Optional[AgenteClient]:
 agente_client = _get_agente_client
 
 
-@csrf_exempt
+@require_agent_api_key
+@csrf_exempt_conditional
 @require_http_methods(["POST"])
 def ejecutar_agente(request):
     """
@@ -230,7 +266,8 @@ def ejecutar_agente(request):
         }, status=400)
 
 
-@csrf_exempt
+@require_agent_api_key
+@csrf_exempt_conditional
 @require_http_methods(["POST"])
 def confirmar_agente(request):
     """
