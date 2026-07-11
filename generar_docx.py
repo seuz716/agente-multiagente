@@ -120,12 +120,14 @@ def crear_docx_aportada(titulo="Análisis del Sistema Agente-Multiagente", autor
 if __name__ == '__main__':
     # Parse cli args: titulo, autor, afiliacion, curso, docente, fecha
     args = sys.argv[1:]
-    ruta = crear_docx_aportada(
-        titulo=args[0] if len(args) > 0 else None,
-        autor=args[1] if len(args) > 1 else None,
-        afiliacion=args[2] if len(args) > 2 else None,
-        curso=args[3] if len(args) > 3 else None,
-        docente=args[4] if len(args) > 4 else None,
-        fecha=args[5] if len(args) > 5 else None
-    )
+    # Solo pasar valores si existen
+    kwargs = {}
+    if len(args) > 0: kwargs['titulo'] = args[0]
+    if len(args) > 1: kwargs['autor'] = args[1]
+    if len(args) > 2: kwargs['afiliacion'] = args[2]
+    if len(args) > 3: kwargs['curso'] = args[3]
+    if len(args) > 4: kwargs['docente'] = args[4]
+    if len(args) > 5: kwargs['fecha'] = args[5]
+    
+    ruta = crear_docx_aportada(**kwargs)
     print(f"Creado: {ruta}")
