@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generador DOCX con formato APA 7 - estudiantil con datos ficticios"""
+import sys
 from docx import Document
 from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
@@ -117,5 +118,14 @@ def crear_docx_aportada(titulo="Análisis del Sistema Agente-Multiagente", autor
     return '/home/cesar/Documentos/agente-multiagente/informe_apa.docx'
 
 if __name__ == '__main__':
-    ruta = crear_docx_aportada()
+    # Parse cli args: titulo, autor, afiliacion, curso, docente, fecha
+    args = sys.argv[1:]
+    ruta = crear_docx_aportada(
+        titulo=args[0] if len(args) > 0 else None,
+        autor=args[1] if len(args) > 1 else None,
+        afiliacion=args[2] if len(args) > 2 else None,
+        curso=args[3] if len(args) > 3 else None,
+        docente=args[4] if len(args) > 4 else None,
+        fecha=args[5] if len(args) > 5 else None
+    )
     print(f"Creado: {ruta}")
